@@ -1,5 +1,5 @@
 """
-Ollama LLM client for the AI Audio Agent
+Ollama LLM client for the AI Audio Agent with vector search integration
 """
 
 import requests
@@ -8,11 +8,12 @@ import time
 from typing import Optional, Dict, Any, List
 from config import get_config
 from utils import colored_print, setup_logging
+from vector_db import VectorDBManager
 
 logger = setup_logging()
 
 class OllamaClient:
-    """Client for interacting with Ollama LLM API"""
+    """Client for interacting with Ollama LLM API with vector search capabilities"""
     
     def __init__(self):
         self.config = get_config("ollama")
@@ -21,11 +22,33 @@ class OllamaClient:
         self.session = requests.Session()
         self.session.timeout = 30
         
+        # Initialize vector database manager
+        self.vector_db = None
+        self._initialize_vector_db()
+        
         # Cache the system prompt to avoid reloading
         self._cached_system_prompt = None
         
         # Test connection on initialization
         self._test_connection()
+    
+    def _initialize_vector_db(self):
+        """Initialize the vector database manager"""
+        try:
+            colored_print("Initializing vector database...", "cyan")
+            self.vector_db = VectorDBManager()
+            
+            # Check if database is empty and populate it
+            stats = self.vector_db.get_database_stats()
+            if stats.get("total_chunks", 0) == 0:
+                colored_print("Vector database is empty, populating with knowledge base...", "cyan")
+                self.vector_db.update_knowledge_base()
+            else:
+                colored_print(f"✓ Vector database loaded with {stats.get('total_chunks', 0)} chunks", "green")
+                
+        except Exception as e:
+            colored_print(f"✗ Error initializing vector database: {e}", "red")
+            self.vector_db = None
     
     def _test_connection(self) -> bool:
         """Test connection to Ollama server"""
@@ -56,15 +79,37 @@ class OllamaClient:
     
     def generate_response(self, prompt: str, context: str = "", 
                          system_prompt: Optional[str] = None) -> str:
-        """Generate a response using the Ollama model"""
+        """Generate a response using the Ollama model with vector search context"""
         try:
-            # Prepare the full prompt with context
+            # Check if this is the first message (no conversation context)
+            is_first_message = not context.strip()
+            
+            # Get relevant context from vector database
+            vector_context = ""
+            if self.vector_db:
+                try:
+                    vector_context = self.vector_db.get_context_for_query(prompt, top_k=3)
+                    if vector_context:
+                        colored_print(f"📚 Found relevant context ({len(vector_context)} chars)", "blue")
+                    else:
+                        colored_print("📚 No relevant context found", "yellow")
+                except Exception as e:
+                    logger.error(f"Error getting vector context: {e}")
+            
+            # Combine conversation context with vector search context
+            full_context = ""
             if context:
-                full_prompt = f"{context}\n\nUser: {prompt}\nAssistant:"
+                full_context += f"Conversation History: {context}\n\n"
+            if vector_context:
+                full_context += f"Relevant Information: {vector_context}\n\n"
+            
+            # Prepare the full prompt
+            if full_context:
+                full_prompt = f"{full_context}User: {prompt}\nAssistant:"
             else:
                 full_prompt = f"User: {prompt}\nAssistant:"
             
-            # Use system prompt from config if not provided
+            # Always use the original system prompt with hardcoded rules
             if system_prompt is None:
                 if self.config["system_prompt"] is None:
                     # Use cached system prompt or load it
@@ -302,3 +347,29 @@ class OllamaClient:
         except Exception as e:
             logger.error(f"Error in streaming generation: {e}")
             return "I'm sorry, an error occurred during response generation." 
+
+    def search_knowledge_base(self, query: str, top_k: int = 3) -> List[Dict[str, Any]]:
+        """Search the knowledge base for relevant information"""
+        if not self.vector_db:
+            return []
+        
+        try:
+            return self.vector_db.search(query, top_k)
+        except Exception as e:
+            logger.error(f"Error searching knowledge base: {e}")
+            return []
+    
+    def update_knowledge_base(self, json_file_path: str = "Ox4labs.json") -> bool:
+        """Update the knowledge base with new content"""
+        if not self.vector_db:
+            colored_print("Vector database not available", "red")
+            return False
+        
+        return self.vector_db.update_knowledge_base(json_file_path)
+    
+    def get_knowledge_base_stats(self) -> Dict[str, Any]:
+        """Get statistics about the knowledge base"""
+        if not self.vector_db:
+            return {"error": "Vector database not available"}
+        
+        return self.vector_db.get_database_stats() 

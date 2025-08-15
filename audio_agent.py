@@ -402,13 +402,53 @@ class AudioAgent:
     
     def get_system_info(self) -> dict:
         """Get system information"""
-        return {
+        info = {
             "stt_model": self.stt.get_model_info() if self.stt else {},
             "tts_model": self.tts.get_model_info() if self.tts else {},
             "llm_model": self.llm.get_model_info() if self.llm else {},
             "conversation": self.conversation.get_conversation_summary() if self.conversation else {},
             "audio_config": self.audio_config,
         }
+        
+        # Add vector database info if available
+        if self.llm and hasattr(self.llm, 'get_knowledge_base_stats'):
+            info["vector_db"] = self.llm.get_knowledge_base_stats()
+        
+        return info
+    
+    def update_knowledge_base(self) -> bool:
+        """Update the knowledge base with new content"""
+        if not self.llm:
+            colored_print("LLM client not available", "red")
+            return False
+        
+        try:
+            return self.llm.update_knowledge_base()
+        except Exception as e:
+            colored_print(f"Error updating knowledge base: {e}", "red")
+            return False
+    
+    def search_knowledge_base(self, query: str, top_k: int = 3) -> list:
+        """Search the knowledge base for relevant information"""
+        if not self.llm:
+            colored_print("LLM client not available", "red")
+            return []
+        
+        try:
+            return self.llm.search_knowledge_base(query, top_k)
+        except Exception as e:
+            colored_print(f"Error searching knowledge base: {e}", "red")
+            return []
+    
+    def get_knowledge_base_stats(self) -> dict:
+        """Get statistics about the knowledge base"""
+        if not self.llm:
+            return {"error": "LLM client not available"}
+        
+        try:
+            return self.llm.get_knowledge_base_stats()
+        except Exception as e:
+            return {"error": str(e)}
     
     def shutdown(self) -> None:
         """Shutdown the audio agent"""

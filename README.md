@@ -7,9 +7,10 @@ An offline, real-time AI assistant that can listen to your voice, understand you
 
 - **Voice Input**: Real-time microphone capture
 - **Speech-to-Text**: OpenAI Whisper (offline)
-- **AI Reasoning**: Local LLM (Ollama) for responses
+- **AI Reasoning**: Local LLM (Ollama) with semantic search
 - **Text-to-Speech**: pyttsx3 (offline)
 - **Context Memory**: Keeps track of conversation history
+- **Vector Database**: ChromaDB with semantic search for accurate responses
 - **No Paid APIs**: Entirely open-source and locally run
 
 ## 🛠️ Prerequisites
@@ -50,6 +51,11 @@ pip install -r requirements.txt
 python test_installation.py
 ```
 
+4. **Test vector database functionality:**
+```bash
+python test_vector_db.py
+```
+
 ## 🎯 Usage
 
 Start the AI Audio Agent:
@@ -62,18 +68,25 @@ python main.py
 
 1. **Start the application** - Run `python main.py`
 2. **Press Enter** - The agent will start listening for your voice
-3. **Speak your question** - Ask anything about ox4labs services
-4. **Listen to the response** - The AI will respond verbally
-5. **Ask follow-up questions** - The conversation continues naturally
-6. **Press 'q' to quit** - When you're done
+3. **First interaction** - The AI will greet you with "Hi, how can I help you?"
+4. **Speak your question** - Ask anything about ox4labs services
+5. **Listen to the response** - The AI will respond verbally using semantic search
+6. **Ask follow-up questions** - The conversation continues naturally
+7. **Press 'q' to quit** - When you're done
 
 ### Voice Commands
 
 - **Press Enter**: Start listening for voice input
 - **Press 'q'**: Quit the application
+- **Press 'h'**: Show help
 - **Press 'i'**: Show system information
 - **Press 'c'**: Clear conversation history
-- **Press 's'**: Save current conversation
+- **Press 'v'**: View conversation history
+- **Press 'x'**: Save current conversation
+- **Press 's'**: Search knowledge base directly
+- **Press 'u'**: Update knowledge base (when JSON content changes)
+- **Press 'k'**: Show knowledge base statistics
+- **Press 'y'**: Show system status
 
 ## 🔧 Configuration
 
@@ -83,6 +96,34 @@ All settings can be modified in `config.py`:
 - **Whisper settings**: Model size, language, confidence thresholds
 - **LLM settings**: Model, temperature, system prompt
 - **TTS settings**: Voice rate, volume, voice selection
+- **Vector Database**: ChromaDB settings and embedding model configuration
+
+## 🧠 Vector Database & Semantic Search
+
+The system now uses a sophisticated vector database (ChromaDB) with semantic search capabilities:
+
+### How It Works
+
+1. **Content Chunking**: The JSON content is parsed into semantically meaningful chunks
+2. **Embedding Generation**: Each chunk is converted to vector embeddings using sentence-transformers
+3. **Vector Storage**: Embeddings are stored in ChromaDB for fast retrieval
+4. **Semantic Search**: User queries are embedded and matched against stored vectors
+5. **Context-Aware Responses**: The most relevant chunks are provided to the LLM for accurate responses
+
+### Benefits
+
+- **More Accurate**: Semantic search finds relevant information even with different wordings
+- **Faster**: Vector similarity search is much faster than text matching
+- **Scalable**: Easy to add new content without changing the system
+- **Flexible**: Can handle variations in how users ask questions
+
+### Updating Content
+
+When you modify the `Ox4labs.json` file:
+
+1. **Press 'u'** in the application to update the knowledge base
+2. **Or restart** the application (it will auto-update if empty)
+3. **The system** will automatically re-embed and store the new content
 
 ## 🏢 ox4labs Integration
 
@@ -92,6 +133,8 @@ The AI is configured to act as a representative of ox4labs, providing informatio
 - **AI Prototyping & Development**: AI-powered products, model training, AI agents
 - **AI Training & Business Workshops**: Executive workshops, workforce upskilling, government training
 - **Process**: Align AI with Business Goals, Co-Creation & Rapid Prototyping, Optimize, Scale & Govern
+
+The system uses semantic search to provide accurate, context-aware responses based on the company's actual information.
 
 ## 🐛 Troubleshooting
 

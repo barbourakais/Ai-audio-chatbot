@@ -170,9 +170,7 @@ class AudioAgentApp:
                 self.agent.clear_conversation()
             return True
         
-        elif key == 's':
-            print_system_status()
-            return True
+
         
         elif key == 'd':
             self.debug_mode = not self.debug_mode
@@ -198,6 +196,25 @@ class AudioAgentApp:
         elif key == 'x':
             if self.agent:
                 self.agent.save_conversation()
+            return True
+        
+        elif key == 'u':  # Update knowledge base
+            if self.agent:
+                self._update_knowledge_base()
+            return True
+        
+        elif key == 'k':  # Show knowledge base stats
+            if self.agent:
+                self._show_knowledge_base_stats()
+            return True
+        
+        elif key == 's':  # Search knowledge base
+            if self.agent:
+                self._search_knowledge_base()
+            return True
+        
+        elif key == 'y':  # Show system status
+            print_system_status()
             return True
         
         return False
@@ -273,6 +290,69 @@ class AudioAgentApp:
             role_icon = "🎤" if message.role == "user" else "🤖"
             role_name = "You" if message.role == "user" else "Assistant"
             colored_print(f"{i+1}. {role_icon} {role_name}: {message.content}", "white")
+        
+        print()
+    
+    def _update_knowledge_base(self):
+        """Update the knowledge base with new content"""
+        colored_print("\n=== Updating Knowledge Base ===", "cyan", "bright")
+        
+        if not self.agent:
+            colored_print("Agent not available", "red")
+            return
+        
+        success = self.agent.update_knowledge_base()
+        if success:
+            colored_print("✓ Knowledge base updated successfully", "green")
+        else:
+            colored_print("✗ Failed to update knowledge base", "red")
+        
+        print()
+    
+    def _show_knowledge_base_stats(self):
+        """Show knowledge base statistics"""
+        colored_print("\n=== Knowledge Base Statistics ===", "cyan", "bright")
+        
+        if not self.agent:
+            colored_print("Agent not available", "red")
+            return
+        
+        stats = self.agent.get_knowledge_base_stats()
+        
+        if "error" in stats:
+            colored_print(f"Error: {stats['error']}", "red")
+        else:
+            colored_print(f"Total chunks: {stats.get('total_chunks', 0)}", "blue")
+            colored_print(f"Collection: {stats.get('collection_name', 'unknown')}", "blue")
+            if stats.get('embedding_model'):
+                colored_print(f"Embedding dimension: {stats['embedding_model']}", "blue")
+        
+        print()
+    
+    def _search_knowledge_base(self):
+        """Search the knowledge base"""
+        colored_print("\n=== Search Knowledge Base ===", "cyan", "bright")
+        
+        if not self.agent:
+            colored_print("Agent not available", "red")
+            return
+        
+        query = input("Enter search query: ").strip()
+        if not query:
+            colored_print("No query provided", "yellow")
+            return
+        
+        results = self.agent.search_knowledge_base(query, top_k=3)
+        
+        if not results:
+            colored_print("No results found", "yellow")
+        else:
+            colored_print(f"Found {len(results)} results:", "green")
+            for i, result in enumerate(results, 1):
+                colored_print(f"\n{i}. Score: {result['similarity_score']:.3f}", "blue")
+                colored_print(f"   Text: {result['text'][:100]}...", "white")
+                if result['metadata']:
+                    colored_print(f"   Type: {result['metadata'].get('type', 'unknown')}", "cyan")
         
         print()
     
